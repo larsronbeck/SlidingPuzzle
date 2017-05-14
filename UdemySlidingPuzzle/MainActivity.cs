@@ -22,6 +22,8 @@ namespace UdemySlidingPuzzle
 		ArrayList tilesArray;
 		ArrayList coordsArray;
 
+		Point emptySpot;
+
 		#endregion
 
 		protected override void OnCreate(Bundle bundle)
@@ -50,12 +52,18 @@ namespace UdemySlidingPuzzle
 			{
 				for (int v = 0; v < 4; v++)
 				{
-					TextView textTile = new TextView(this);
+					MyTextView textTile = new MyTextView(this);
 
 					GridLayout.Spec rowSpec = GridLayout.InvokeSpec(h);
 					GridLayout.Spec colSpec = GridLayout.InvokeSpec(v);
 
 					GridLayout.LayoutParams tileLayoutParams = new GridLayout.LayoutParams(rowSpec, colSpec);
+
+					//	 0 1 2 3 v/x
+					// 0 T T T T
+					// 1 T T T T
+					// 2 T T T T
+					// 3 T T T T
 
 					textTile.Text = counter.ToString();
 					textTile.SetTextColor(Color.Black);
@@ -71,6 +79,12 @@ namespace UdemySlidingPuzzle
 
 					Point thisLoc = new Point(v, h);
 					coordsArray.Add(thisLoc);
+
+					textTile.xPos = thisLoc.X;
+					textTile.yPos = thisLoc.Y;
+
+					textTile.Touch += TextTile_Touch;
+
 					tilesArray.Add(textTile);
 
 					mainLayout.AddView(textTile);
@@ -80,23 +94,82 @@ namespace UdemySlidingPuzzle
 			#endregion
 
 
-			mainLayout.RemoveView((TextView)tilesArray[15]);
+			mainLayout.RemoveView((MyTextView)tilesArray[15]);
 			tilesArray.RemoveAt(15);
+		}
+
+		// x=2, y=3
+		// x=3, y=3
+
+		private void TextTile_Touch(object sender, View.TouchEventArgs e)
+		{
+			if (e.Event.Action==MotionEventActions.Up)
+			{
+				MyTextView thisTile = (MyTextView)sender;
+
+				Console.WriteLine("\r\r\r this tile is at: \r x={0} y={1}", thisTile.xPos, thisTile.yPos) ;
+				Console.WriteLine("\r\r\r empty tile is at: \r x={0} y={1}", emptySpot.X, emptySpot.Y);
+
+				float xDiff = (float)Math.Pow(thisTile.xPos - emptySpot.X, 2);
+				float yDiff = (float)Math.Pow(thisTile.yPos - emptySpot.Y, 2);
+				float dist = (float)Math.Sqrt(xDiff + yDiff);
+
+				if (dist == 1)
+				{
+					// tile can move
+					// memorize where the tile used to be
+					Point currPoint = new Point(thisTile.xPos, thisTile.yPos);
+
+					// now take the tile to the empty
+					GridLayout.Spec rowSpec = GridLayout.InvokeSpec(emptySpot.Y);
+					GridLayout.Spec colSpec = GridLayout.InvokeSpec(emptySpot.X);
+
+					GridLayout.LayoutParams newLocalParams = new GridLayout.LayoutParams(rowSpec, colSpec);
+
+					thisTile.xPos = emptySpot.X;
+					thisTile.yPos = emptySpot.Y;
+
+					newLocalParams.Width = tileWidth - 10;
+					newLocalParams.Height = tileWidth - 10;
+					newLocalParams.SetMargins(5, 5, 5, 5);
+
+
+					thisTile.LayoutParameters = newLocalParams;
+
+					emptySpot = currPoint;
+				}
+			}
 		}
 
 		private void RandomizeTiles()
 		{
+			ArrayList tempCoords = new ArrayList(coordsArray); // 16 elements
 			Random myRand = new Random();
-			foreach (TextView any in tilesArray)
+			foreach (MyTextView any in tilesArray)	// 15 elements
 			{
-				int randIndex = myRand.Next(0, coordsArray.Count);
-				Point thisRandLoc = (Point)coordsArray[randIndex];
+				int randIndex = myRand.Next(0, tempCoords.Count);
+				Point thisRandLoc = (Point)tempCoords[randIndex];
 
 				GridLayout.Spec rowSpec = GridLayout.InvokeSpec(thisRandLoc.Y);
 				GridLayout.Spec colSpec = GridLayout.InvokeSpec(thisRandLoc.X);
-
 				GridLayout.LayoutParams randLayoutParam = new GridLayout.LayoutParams(rowSpec, colSpec);
+
+
+				any.xPos = thisRandLoc.X;
+				any.yPos = thisRandLoc.Y;
+
+				randLayoutParam.Width = tileWidth - 10;
+				randLayoutParam.Height = tileWidth - 10;
+				randLayoutParam.SetMargins(5, 5, 5, 5);
+
+
+				any.LayoutParameters = randLayoutParam;
+
+				tempCoords.RemoveAt(randIndex);
 			}
+
+			Console.WriteLine("\r\r\r\r there are: {0} elements left", tempCoords.Count);
+			emptySpot = (Point)tempCoords[0];
 		}
 
 		private void SetGameView()
@@ -116,9 +189,22 @@ namespace UdemySlidingPuzzle
 		}
 
 		private void ResetButton_Click(object sender, System.EventArgs e)
-		{
-			throw new System.NotImplementedException();
+		{			
+			RandomizeTiles();
 		}
+	}
+
+	class MyTextView : TextView
+	{
+		Activity myContext;
+
+		public MyTextView (Activity context) : base (context)
+		{
+			myContext = context;
+		}
+
+		public int xPos { set; get; }
+		public int yPos { set; get; }
 	}
 }
 
